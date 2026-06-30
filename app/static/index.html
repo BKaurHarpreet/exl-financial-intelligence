@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EXL Financial Intelligence</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>EXL Financial Intelligence</h1>
+        <button id="run-pipeline" type="button">Run ETL</button>
+      </header>
+      <section>
+        <h2>Pipeline Runs</h2>
+        <table id="runs"><thead><tr><th>Status</th><th>Started</th><th>Files</th><th>Bronze</th><th>Silver</th><th>Gold</th></tr></thead><tbody></tbody></table>
+      </section>
+      <section>
+        <h2>Gold Metrics</h2>
+        <table id="metrics"><thead><tr><th>Year</th><th>Metric</th><th>Observations</th><th>Total</th><th>Average</th></tr></thead><tbody></tbody></table>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
