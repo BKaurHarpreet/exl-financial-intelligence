@@ -4,7 +4,7 @@ from pathlib import Path
 import re
 
 
-NULL_VALUES = {"", "na", "n/a", "none", "null", "-", "--"}
+NULL_VALUES = {"", "na", "n/a", "none", "null", "-", "--", "nan"}
 
 
 @dataclass(frozen=True)
@@ -61,7 +61,8 @@ def parse_decimal(value: object) -> Decimal | None:
     if negative:
         text = f"-{text}"
     try:
-        return Decimal(text)
+        val = Decimal(text)
+        return None if val.is_nan() else val
     except (InvalidOperation, ValueError):
         return None
 

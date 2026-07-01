@@ -4,7 +4,6 @@ import hashlib
 import logging
 from pathlib import Path
 from typing import Iterable
-from uuid import UUID
 
 import pandas as pd
 from sqlalchemy import text
@@ -57,14 +56,14 @@ def iter_workbook_cells(path: Path) -> Iterable[RawCell]:
                 )
 
 
-def load_bronze(connection: Connection, run_id: UUID, raw_data_dir: Path) -> int:
+def load_bronze(connection: Connection, run_id: str, raw_data_dir: Path) -> int:
     total_cells = 0
     for path in sorted(raw_data_dir.glob("*.xls")):
         logger.info("Loading bronze workbook %s", path.name)
         workbook_id = connection.execute(
             text(
                 """
-                INSERT INTO bronze.workbooks
+                INSERT INTO bronze_workbooks
                     (run_id, source_file, fiscal_year, file_sha256, file_size_bytes)
                 VALUES
                     (:run_id, :source_file, :fiscal_year, :file_sha256, :file_size_bytes)
@@ -109,7 +108,7 @@ def load_bronze(connection: Connection, run_id: UUID, raw_data_dir: Path) -> int
 def _insert_cells_sql():
     return text(
         """
-        INSERT INTO bronze.cells
+        INSERT INTO bronze_cells
             (workbook_id, sheet_name, row_number, column_number, column_label,
              raw_value, normalized_text, inferred_type, is_blank, source_address)
         VALUES

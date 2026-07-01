@@ -10,6 +10,11 @@ from app.config import get_settings
 def get_engine() -> Engine:
     settings = get_settings()
     if settings.database_url.startswith("sqlite:///"):
+        import sqlite3
+        from decimal import Decimal
+        # Register Decimal adapter for sqlite3
+        sqlite3.register_adapter(Decimal, lambda d: float(d) if not d.is_nan() else None)
+
         db_path = Path(settings.database_url.removeprefix("sqlite:///"))
         db_path.parent.mkdir(parents=True, exist_ok=True)
         return create_engine(settings.database_url, connect_args={"check_same_thread": False})

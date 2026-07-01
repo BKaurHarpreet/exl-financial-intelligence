@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
@@ -10,7 +9,7 @@ from app.etl.transform import infer_unit
 from app.etl.types import clean_metric_name, parse_decimal
 
 
-def load_silver(connection: Connection, run_id: UUID) -> int:
+def load_silver(connection: Connection, run_id: str) -> int:
     rows = connection.execute(
         text(
             """
@@ -18,14 +17,14 @@ def load_silver(connection: Connection, run_id: UUID) -> int:
                    c.row_number, c.column_number, c.normalized_text, c.source_address,
                    label.normalized_text AS metric_label,
                    header.normalized_text AS period_label
-            FROM bronze.cells c
-            JOIN bronze.workbooks w ON w.workbook_id = c.workbook_id
-            LEFT JOIN bronze.cells label
+            FROM bronze_cells c
+            JOIN bronze_workbooks w ON w.workbook_id = c.workbook_id
+            LEFT JOIN bronze_cells label
                 ON label.workbook_id = c.workbook_id
                AND label.sheet_name = c.sheet_name
                AND label.row_number = c.row_number
                AND label.column_number = 1
-            LEFT JOIN bronze.cells header
+            LEFT JOIN bronze_cells header
                 ON header.workbook_id = c.workbook_id
                AND header.sheet_name = c.sheet_name
                AND header.row_number = 1
@@ -66,7 +65,7 @@ def load_silver(connection: Connection, run_id: UUID) -> int:
         connection.execute(
             text(
                 """
-                INSERT INTO silver.financial_facts
+                INSERT INTO silver_financial_facts
                     (run_id, cell_id, fiscal_year, source_file, sheet_name,
                      statement_section, metric_name, period_label, value_numeric,
                      value_text, unit, source_address)

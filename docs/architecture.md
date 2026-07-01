@@ -4,8 +4,8 @@
 
 The local runtime uses Docker Compose:
 
-- `db`: PostgreSQL 16 with initialization SQL mounted from `sql/`
 - `api`: FastAPI application, ETL runner, static HTML frontend, and tests
+- `db`: SQLite database at `data/exl_financial_intelligence.db`
 
 ## Data Flow
 

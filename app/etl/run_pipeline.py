@@ -7,7 +7,7 @@ from uuid import uuid4
 from sqlalchemy import text
 
 from app.config import get_settings
-from app.db import get_engine
+from app.db import get_engine, initialize_database
 from app.etl.bronze import load_bronze
 from app.etl.gold import build_gold
 from app.etl.silver import load_silver
@@ -18,18 +18,19 @@ logger = logging.getLogger(__name__)
 
 def run_pipeline() -> str:
     configure_logging()
+    initialize_database()
     settings = get_settings()
     raw_data_dir = Path(settings.raw_data_dir)
     if not raw_data_dir.exists():
         raise FileNotFoundError(f"Raw data directory not found: {raw_data_dir}")
 
-    run_id = uuid4()
+    run_id = str(uuid4())
     source_file_count = len(list(raw_data_dir.glob("*.xls")))
     engine = get_engine()
     with engine.begin() as connection:
         connection.execute(
             text("""
-                INSERT INTO lineage.pipeline_runs
+                INSERT INTO lineage_pipeline_runs
                     (run_id, status, raw_data_dir, source_file_count)
                 VALUES
                     (:run_id, 'running', :raw_data_dir, :source_file_count)
@@ -42,8 +43,8 @@ def run_pipeline() -> str:
             gold_count = build_gold(connection, run_id)
             connection.execute(
                 text("""
-                    UPDATE lineage.pipeline_runs
-                    SET status = 'succeeded', finished_at = now(),
+                    UPDATE lineage_pipeline_runs
+                    SET status = 'succeeded', finished_at = CURRENT_TIMESTAMP,
                         bronze_cells_loaded = :bronze_count,
                         silver_facts_loaded = :silver_count,
                         gold_rows_loaded = :gold_count,
@@ -56,8 +57,8 @@ def run_pipeline() -> str:
             logger.exception("Pipeline failed")
             connection.execute(
                 text("""
-                    UPDATE lineage.pipeline_runs
-                    SET status = 'failed', finished_at = now(), message = :message
+                    UPDATE lineage_pipeline_runs
+                    SET status = 'failed', finished_at = CURRENT_TIMESTAMP, message = :message
                     WHERE run_id = :run_id
                 """),
                 {"run_id": run_id, "message": str(exc)},
