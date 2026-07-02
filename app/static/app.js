@@ -1,7 +1,23 @@
 async function getJson(url, options) {
   const response = await fetch(url, options);
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) throw new Error(`${url} -> ${response.status}: ${await response.text()}`);
   return response.json();
+}
+
+function setStatus(message, isError) {
+  let el = document.getElementById("status-banner");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "status-banner";
+    document.querySelector("main").prepend(el);
+  }
+  if (!message) {
+    el.style.display = "none";
+    return;
+  }
+  el.textContent = message;
+  el.style.display = "block";
+  el.className = isError ? "status-banner status-error" : "status-banner status-loading";
 }
 
 function setRows(tableId, rows, columns) {
@@ -88,21 +104,56 @@ function renderCharts(trends) {
 }
 
 async function refresh() {
-  const [runs, metrics, kpiLatest, kpiTrends] = await Promise.all([
+  setStatus("Loading dashboard...", false);
+  const results = await Promise.allSettled([
     getJson("/pipeline/runs"),
     getJson("/metrics?limit=100"),
     getJson("/kpis/latest"),
     getJson("/kpis"),
   ]);
-  setRows("runs", runs, ["status", "started_at", "source_file_count", "bronze_cells_loaded", "silver_facts_loaded", "gold_rows_loaded"]);
-  setRows("metrics", metrics, ["fiscal_year", "metric_name", "observations", "total_value", "average_value"]);
-  renderCards(kpiLatest);
-  renderCharts(kpiTrends);
+  const [runsR, metricsR, latestR, trendsR] = results;
+  const failures = results.filter(r => r.status === "rejected");
+
+  if (runsR.status === "fulfilled") {
+    setRows("runs", runsR.value, ["status", "started_at", "source_file_count", "bronze_cells_loaded", "silver_facts_loaded", "gold_rows_loaded"]);
+  }
+  if (metricsR.status === "fulfilled") {
+    setRows("metrics", metricsR.value, ["fiscal_year", "metric_name", "observations", "total_value", "average_value"]);
+  }
+  if (latestR.status === "fulfilled" && latestR.value.length > 0) {
+    renderCards(latestR.value);
+  } else if (latestR.status === "fulfilled") {
+    document.getElementById("kpi-cards").innerHTML =
+      "<p>No KPI data yet -- the pipeline may still be running on first startup. Try refreshing in a moment.</p>";
+  }
+  if (trendsR.status === "fulfilled" && trendsR.value.length > 0) {
+    renderCharts(trendsR.value);
+  }
+
+  if (failures.length > 0) {
+    console.error("Dashboard load errors:", failures.map(f => f.reason));
+    setStatus(`Some data failed to load (${failures.length} of ${results.length} requests). Check console for details.`, true);
+  } else {
+    setStatus(null, false);
+  }
 }
 
 document.getElementById("run-pipeline").addEventListener("click", async () => {
-  await getJson("/pipeline/run", { method: "POST" });
-  await refresh();
+  const button = document.getElementById("run-pipeline");
+  button.disabled = true;
+  setStatus("Running ETL pipeline... this can take a minute.", false);
+  try {
+    await getJson("/pipeline/run", { method: "POST" });
+    await refresh();
+  } catch (error) {
+    console.error("Pipeline run failed:", error);
+    setStatus(`Pipeline run failed: ${error.message}`, true);
+  } finally {
+    button.disabled = false;
+  }
 });
 
-refresh().catch((error) => console.error(error));
+refresh().catch((error) => {
+  console.error("Initial dashboard load failed:", error);
+  setStatus(`Dashboard failed to load: ${error.message}`, true);
+});

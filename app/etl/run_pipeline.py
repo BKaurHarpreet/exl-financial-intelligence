@@ -50,10 +50,16 @@ def run_pipeline() -> str:
                         bronze_cells_loaded = :bronze_count,
                         silver_facts_loaded = :silver_count,
                         gold_rows_loaded = :gold_count,
-                        message = 'Pipeline completed ({kpi_count} KPI rows)'
+                        message = :message
                     WHERE run_id = :run_id
                 """),
-                {"run_id": run_id, "bronze_count": bronze_count, "silver_count": silver_count, "gold_count": gold_count},
+                {
+                    "run_id": run_id,
+                    "bronze_count": bronze_count,
+                    "silver_count": silver_count,
+                    "gold_count": gold_count,
+                    "message": f"Pipeline completed ({kpi_count} KPI rows)",
+                },
             )
         except Exception as exc:
             logger.exception("Pipeline failed")

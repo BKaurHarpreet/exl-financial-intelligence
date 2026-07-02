@@ -10,4 +10,6 @@
 .chart-card { background: white; border: 1px solid #d9e2ec; border-radius: 8px; padding: 16px; }
 details { margin-top: 32px; }
 details summary { cursor: pointer; font-weight: 700; margin-bottom: 12px; }
-```
+.status-banner { margin: 16px 0; padding: 10px 14px; border-radius: 6px; font-size: 14px; }
+.status-banner.status-loading { background: #eef2f6; color: #334e68; border: 1px solid #d9e2ec; }
+.status-banner.status-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }

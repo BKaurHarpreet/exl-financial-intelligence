@@ -7,13 +7,28 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.db import fetch_all, initialize_database
 from app.etl.run_pipeline import run_pipeline
 from app.logging_config import configure_logging
+import logging
 
 configure_logging()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize_database()
+    # Ensure the dashboard has data the first time anyone opens it --
+    # don't make "click Run ETL" a precondition for seeing the page.
+    try:
+        existing = fetch_all("SELECT COUNT(*) AS n FROM gold_kpi_trends")
+        has_data = existing and existing[0]["n"] > 0
+    except SQLAlchemyError:
+        has_data = False
+    if not has_data:
+        logger.info("gold_kpi_trends is empty -- running pipeline once at startup")
+        try:
+            run_pipeline()
+        except Exception:
+            logger.exception("Startup pipeline run failed; dashboard will show empty state")
     yield
 
 
@@ -39,6 +54,15 @@ def health() -> dict:
     except SQLAlchemyError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {"status": "ok"}
+
+
+@app.get("/health/data")
+def health_data() -> dict:
+    try:
+        rows = fetch_all("SELECT COUNT(*) AS n FROM gold_kpi_trends")
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {"kpi_rows": rows[0]["n"] if rows else 0}
 
 
 @app.post("/pipeline/run")
