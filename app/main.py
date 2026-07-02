@@ -19,12 +19,18 @@ async def lifespan(app: FastAPI):
     # Ensure the dashboard has data the first time anyone opens it --
     # don't make "click Run ETL" a precondition for seeing the page.
     try:
-        existing = fetch_all("SELECT COUNT(*) AS n FROM gold_kpi_trends")
-        has_data = existing and existing[0]["n"] > 0
+        existing = fetch_all("""
+            SELECT
+                (SELECT COUNT(*) FROM gold_kpi_trends) AS kpi_count,
+                (SELECT COUNT(*) FROM gold_segment_trends) AS segment_count,
+                (SELECT COUNT(*) FROM gold_dashboard_notes) AS notes_count
+        """)
+        row = existing[0] if existing else {}
+        has_data = row.get("kpi_count", 0) > 0 and row.get("segment_count", 0) > 0 and row.get("notes_count", 0) > 0
     except SQLAlchemyError:
         has_data = False
     if not has_data:
-        logger.info("gold_kpi_trends is empty -- running pipeline once at startup")
+        logger.info("Gold tables incomplete (new schema or first run) -- running pipeline once at startup")
         try:
             run_pipeline()
         except Exception:
@@ -150,7 +156,7 @@ def metric_lineage(metric_name: str, fiscal_year: int | None = None) -> list[dic
     geo_rows = fetch_all("""
         SELECT fiscal_year, country, revenue, source_file, sheet_name, source_address
         FROM gold_geography_trends
-        WHERE LOWER(country) = LOWER(:key) OR LOWER(REPLACE(country, 'The ', '')) = LOWER(:key)
+        WHERE (LOWER(country) = LOWER(:key) OR LOWER(REPLACE(country, 'The ', '')) = LOWER(:key))
           AND (:fiscal_year IS NULL OR fiscal_year = :fiscal_year)
         ORDER BY fiscal_year DESC
     """, {"key": key, "fiscal_year": fiscal_year})

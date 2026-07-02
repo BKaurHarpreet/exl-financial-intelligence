@@ -215,6 +215,7 @@ def build_kpi_trends(connection: Connection, run_id: str) -> int:
     if not enriched:
         return 0
 
+    connection.execute(text("DELETE FROM gold_kpi_trends"))
     connection.execute(
         text("""
             INSERT INTO gold_kpi_trends

@@ -301,6 +301,7 @@ def build_cash_position(connection: Connection, run_id: str) -> int:
             best[f["fiscal_year"]] = f
     rows = list(best.values())
     if rows:
+        connection.execute(text("DELETE FROM gold_cash_position"))
         connection.execute(
             text("""
                 INSERT INTO gold_cash_position
@@ -318,6 +319,7 @@ def build_segment_and_geo_trends(connection: Connection, run_id: str) -> tuple[i
     cash_facts = _dedupe_prefer_earliest_filing(_extract_cash_flow(connection, run_id))
 
     if segment_facts:
+        connection.execute(text("DELETE FROM gold_segment_trends"))
         connection.execute(
             text("""
                 INSERT INTO gold_segment_trends
@@ -327,6 +329,7 @@ def build_segment_and_geo_trends(connection: Connection, run_id: str) -> tuple[i
             segment_facts,
         )
     if geo_facts:
+        connection.execute(text("DELETE FROM gold_geography_trends"))
         connection.execute(
             text("""
                 INSERT INTO gold_geography_trends
@@ -336,6 +339,7 @@ def build_segment_and_geo_trends(connection: Connection, run_id: str) -> tuple[i
             geo_facts,
         )
     if cash_facts:
+        connection.execute(text("DELETE FROM gold_cash_flow_trends"))
         by_year: dict[int, dict] = {}
         for f in cash_facts:
             entry = by_year.setdefault(f["fiscal_year"], {

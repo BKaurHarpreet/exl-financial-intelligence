@@ -196,6 +196,7 @@ def build_dashboard_notes(connection: Connection, run_id: str) -> int:
     notes += _eps_swing_notes(connection, run_id)
 
     if notes:
+        connection.execute(text("DELETE FROM gold_dashboard_notes"))
         connection.execute(
             text("""
                 INSERT INTO gold_dashboard_notes (run_id, category, fiscal_year, note_text, source_tag)
