@@ -16,7 +16,23 @@ def load_silver(connection: Connection, run_id: str) -> int:
             SELECT c.cell_id, w.fiscal_year, w.source_file, c.sheet_name,
                    c.row_number, c.column_number, c.normalized_text, c.source_address,
                    label.normalized_text AS metric_label,
-                   header.normalized_text AS period_label
+                   (
+                       SELECT h.normalized_text
+                       FROM bronze_cells h
+                       WHERE h.workbook_id = c.workbook_id
+                         AND h.sheet_name = c.sheet_name
+                         AND h.column_number = c.column_number
+                         AND h.row_number < c.row_number
+                         AND h.row_number <= 8
+                         AND h.normalized_text IS NOT NULL
+                         AND (
+                             h.inferred_type != 'number'
+                             OR h.normalized_text GLOB '20[0-9][0-9]'
+                             OR h.normalized_text GLOB '19[0-9][0-9]'
+                         )
+                       ORDER BY h.row_number DESC
+                       LIMIT 1
+                   ) AS period_label
             FROM bronze_cells c
             JOIN bronze_workbooks w ON w.workbook_id = c.workbook_id
             LEFT JOIN bronze_cells label
@@ -24,11 +40,6 @@ def load_silver(connection: Connection, run_id: str) -> int:
                AND label.sheet_name = c.sheet_name
                AND label.row_number = c.row_number
                AND label.column_number = 1
-            LEFT JOIN bronze_cells header
-                ON header.workbook_id = c.workbook_id
-               AND header.sheet_name = c.sheet_name
-               AND header.row_number = 1
-               AND header.column_number = c.column_number
             WHERE w.run_id = :run_id
               AND c.inferred_type = 'number'
               AND c.column_number > 1

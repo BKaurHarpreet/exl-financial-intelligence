@@ -69,10 +69,22 @@ def filings() -> list[dict]:
 @app.get("/metrics")
 def metrics(limit: int = 100) -> list[dict]:
     return fetch_all("""
-        SELECT fiscal_year, metric_name, observations, numeric_observations,
-               total_value, average_value, min_value, max_value, source_files
+        SELECT 
+            MAX(fiscal_year) AS fiscal_year,
+            metric_name, 
+            COUNT(DISTINCT fiscal_year) AS observations,
+            SUM(numeric_observations) AS numeric_observations,
+            SUM(total_value) AS total_value,
+            CASE 
+                WHEN SUM(numeric_observations) > 0 THEN SUM(total_value) / SUM(numeric_observations)
+                ELSE 0 
+            END AS average_value,
+            MIN(min_value) AS min_value,
+            MAX(max_value) AS max_value,
+            '' AS source_files
         FROM gold_annual_metric_summary
-        ORDER BY fiscal_year DESC, metric_name
+        GROUP BY metric_name
+        ORDER BY observations DESC, metric_name
         LIMIT :limit
     """, {"limit": min(limit, 500)})
 

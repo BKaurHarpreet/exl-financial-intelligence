@@ -22,10 +22,12 @@ def get_engine() -> Engine:
 
 
 def initialize_database() -> None:
-    schema_path = Path("sql/001_init.sql")
+    schema_path = Path("sql/gold_kpi_insights_sqlite.sql")
     statements = [statement.strip() for statement in schema_path.read_text(encoding="utf-8").split(";") if statement.strip()]
     engine = get_engine()
     with engine.begin() as connection:
+        if engine.name == "sqlite":
+            connection.execute(text("PRAGMA journal_mode=WAL;"))
         for statement in statements:
             connection.execute(text(statement))
 
