@@ -125,6 +125,19 @@ def metrics(limit: int = 100) -> list[dict]:
     """, {"limit": min(limit, 500)})
 
 
+@app.get("/lineage/options")
+def lineage_options() -> dict:
+    metrics = fetch_all("SELECT DISTINCT metric_name FROM gold_kpi_trends ORDER BY metric_name")
+    segments = fetch_all("SELECT DISTINCT segment_name FROM gold_segment_trends ORDER BY segment_name")
+    countries = fetch_all("SELECT DISTINCT country FROM gold_geography_trends ORDER BY country")
+    return {
+        "metrics": [r["metric_name"] for r in metrics],
+        "segments": [r["segment_name"] for r in segments],
+        "countries": [r["country"] for r in countries],
+        "cash_flow": ["operating", "investing", "financing"],
+    }
+
+
 @app.get("/lineage/{metric_name}")
 def metric_lineage(metric_name: str, fiscal_year: int | None = None) -> list[dict]:
     key = metric_name.strip().lower()

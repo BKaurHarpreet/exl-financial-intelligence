@@ -117,22 +117,33 @@ def _extract_segment_revenue(connection: Connection, run_id: str) -> list[dict]:
             if header_row is None:
                 continue
 
-            header_seen = False
+            # The section title ("Revenues.", "Revenues, net:") can appear either
+            # before or after the year-header row depending on filing year -- find
+            # it independently first, then only look for segment rows and the total
+            # after BOTH the title and the year header (that's where real data starts).
+            title_row = None
+            for row_num in sorted(grid.text):
+                label = grid.label(row_num)
+                if label and "revenue" in label.lower():
+                    title_row = row_num
+                    break
+            if title_row is None:
+                continue
+            start_row = max(title_row, header_row)
+
             total_row = None
             segment_rows: list[tuple[int, str]] = []
             for row_num in sorted(grid.text):
+                if row_num <= start_row:
+                    continue
                 label = grid.label(row_num)
                 if not label:
                     continue
-                low = label.lower()
-                if low.startswith("revenues, net"):
-                    if header_seen:
-                        total_row = row_num
-                        break
-                    header_seen = True
-                    continue
-                if header_seen and row_num > header_row:
-                    segment_rows.append((row_num, label))
+                if "revenue" in label.lower():
+                    total_row = row_num
+                    break
+                segment_rows.append((row_num, label))
+            header_seen = True
 
             if not header_seen or total_row is None or not segment_rows:
                 continue

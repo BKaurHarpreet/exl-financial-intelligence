@@ -182,35 +182,19 @@
 
 <main>
   <p class="intro">
-    Type a metric name (revenue, diluted_eps, gross_profit, net_income, operating/investing/financing
-    cash flow), a segment name (e.g. "Insurance"), or a country name (e.g. "The United States") to see
-    exactly which filing, sheet, and cell each reported value came from. Segment and country names vary
-    by filing year — EXL has renamed its segments three times since FY2017 — so try a few if one comes
-    up empty. This calls the live API; it only returns data when this page is served by the running
-    EXL Financial Intelligence app.
+    Pick a metric, business segment, or country from the dropdown below — it's populated from what's
+    actually in the database right now, grouped by category. Segment and country names vary by filing
+    year (EXL has renamed its segments three times since FY2017), so only names that currently have
+    data will appear. This calls the live API; it only returns data when this page is served by the
+    running EXL Financial Intelligence app.
   </p>
 
   <div class="controls">
     <div class="field">
       <label for="metric">Metric, Segment, or Country</label>
-      <input id="metric" list="metric-suggestions" placeholder="e.g. revenue" value="revenue" />
-      <datalist id="metric-suggestions">
-        <option value="revenue">
-        <option value="gross_profit">
-        <option value="operating_income">
-        <option value="operating_margin_pct">
-        <option value="net_income">
-        <option value="diluted_eps">
-        <option value="operating">
-        <option value="investing">
-        <option value="financing">
-        <option value="Insurance">
-        <option value="Healthcare and Life Sciences">
-        <option value="Analytics">
-        <option value="The United States">
-        <option value="The United Kingdom">
-        <option value="Rest of World">
-      </datalist>
+      <select id="metric">
+        <option value="">Loading available options…</option>
+      </select>
     </div>
     <div class="field">
       <label for="fiscalYear">Fiscal Year (optional)</label>
@@ -244,6 +228,45 @@ function setStatus(message, kind) {
   el.textContent = message;
   el.className = kind;
   el.style.display = 'block';
+}
+
+async function loadOptions() {
+  const select = document.getElementById('metric');
+  try {
+    const response = await fetch('/lineage/options');
+    if (!response.ok) throw new Error(`${response.status}`);
+    const opts = await response.json();
+
+    const groups = [
+      ['Financial Metrics', opts.metrics],
+      ['Cash Flow', opts.cash_flow],
+      ['Business Segments', opts.segments],
+      ['Countries', opts.countries],
+    ];
+
+    select.innerHTML = '';
+    let firstValue = null;
+    for (const [label, values] of groups) {
+      if (!values || !values.length) continue;
+      const group = document.createElement('optgroup');
+      group.label = label;
+      for (const v of values) {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        group.appendChild(opt);
+        if (firstValue === null) firstValue = v;
+      }
+      select.appendChild(group);
+    }
+    if (firstValue !== null) select.value = firstValue;
+    if (!select.options.length) {
+      select.innerHTML = '<option value="">No data available yet — run the pipeline first</option>';
+    }
+  } catch (error) {
+    console.error('Failed to load lineage options:', error);
+    select.innerHTML = '<option value="">Failed to load options — is the API running?</option>';
+  }
 }
 
 async function lookup() {
@@ -298,6 +321,7 @@ async function lookup() {
 
 document.getElementById('lookup').addEventListener('click', lookup);
 document.getElementById('fiscalYear').addEventListener('keydown', (e) => { if (e.key === 'Enter') lookup(); });
+loadOptions();
 </script>
 
 </body>
