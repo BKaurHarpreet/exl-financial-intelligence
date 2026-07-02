@@ -12,6 +12,7 @@ from app.etl.bronze import load_bronze
 from app.etl.gold import build_gold
 from app.etl.silver import load_silver
 from app.logging_config import configure_logging
+from app.etl.kpi import build_kpi_trends
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ def run_pipeline() -> str:
             bronze_count = load_bronze(connection, run_id, raw_data_dir)
             silver_count = load_silver(connection, run_id)
             gold_count = build_gold(connection, run_id)
+            kpi_count = build_kpi_trends(connection, run_id)
             connection.execute(
                 text("""
                     UPDATE lineage_pipeline_runs
@@ -48,7 +50,7 @@ def run_pipeline() -> str:
                         bronze_cells_loaded = :bronze_count,
                         silver_facts_loaded = :silver_count,
                         gold_rows_loaded = :gold_count,
-                        message = 'Pipeline completed'
+                        message = 'Pipeline completed ({kpi_count} KPI rows)'
                     WHERE run_id = :run_id
                 """),
                 {"run_id": run_id, "bronze_count": bronze_count, "silver_count": silver_count, "gold_count": gold_count},
@@ -66,6 +68,8 @@ def run_pipeline() -> str:
             raise
     logger.info("Pipeline run %s completed", run_id)
     return str(run_id)
+
+
 
 
 if __name__ == "__main__":

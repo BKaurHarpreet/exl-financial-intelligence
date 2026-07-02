@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>EXL Financial Intelligence</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
   </head>
   <body>
     <main>
@@ -12,14 +13,21 @@
         <h1>EXL Financial Intelligence</h1>
         <button id="run-pipeline" type="button">Run ETL</button>
       </header>
-      <section>
-        <h2>Pipeline Runs</h2>
-        <table id="runs"><thead><tr><th>Status</th><th>Started</th><th>Files</th><th>Bronze</th><th>Silver</th><th>Gold</th></tr></thead><tbody></tbody></table>
-      </section>
-      <section>
-        <h2>Gold Metrics</h2>
-        <table id="metrics"><thead><tr><th>Year</th><th>Metric</th><th>Observations</th><th>Total</th><th>Average</th></tr></thead><tbody></tbody></table>
-      </section>
+
+      <section id="kpi-cards" class="kpi-grid"></section>
+      <section id="kpi-charts" class="chart-grid"></section>
+
+      <details>
+        <summary>Pipeline runs &amp; raw data (debug)</summary>
+        <section>
+          <h2>Pipeline Runs</h2>
+          <table id="runs"><thead><tr><th>Status</th><th>Started</th><th>Files</th><th>Bronze</th><th>Silver</th><th>Gold</th></tr></thead><tbody></tbody></table>
+        </section>
+        <section>
+          <h2>Gold Metrics (raw)</h2>
+          <table id="metrics"><thead><tr><th>Year</th><th>Metric</th><th>Observations</th><th>Total</th><th>Average</th></tr></thead><tbody></tbody></table>
+        </section>
+      </details>
     </main>
     <script src="/static/app.js"></script>
   </body>

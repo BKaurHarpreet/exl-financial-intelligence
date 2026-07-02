@@ -21,15 +21,14 @@ def get_engine() -> Engine:
     return create_engine(settings.database_url, pool_pre_ping=True)
 
 
+
 def initialize_database() -> None:
-    schema_path = Path("sql/gold_kpi_insights_sqlite.sql")
-    statements = [statement.strip() for statement in schema_path.read_text(encoding="utf-8").split(";") if statement.strip()]
     engine = get_engine()
     with engine.begin() as connection:
-        if engine.name == "sqlite":
-            connection.execute(text("PRAGMA journal_mode=WAL;"))
-        for statement in statements:
-            connection.execute(text(statement))
+        for schema_file in sorted(Path("sql").glob("*.sql")):
+            statements = [s.strip() for s in schema_file.read_text(encoding="utf-8").split(";") if s.strip()]
+            for statement in statements:
+                connection.execute(text(statement))
 
 
 def session_scope() -> Iterator:

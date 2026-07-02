@@ -100,3 +100,28 @@ def metric_lineage(metric_name: str, fiscal_year: int | None = None) -> list[dic
         ORDER BY fiscal_year DESC, source_file, sheet_name, source_address
         LIMIT 250
     """, {"metric_name": metric_name, "fiscal_year": fiscal_year})
+
+
+@app.get("/kpis")
+def kpis() -> list[dict]:
+    return fetch_all("""
+        SELECT fiscal_year, metric_name, value, yoy_change_pct, cagr_3yr_pct, insight_text
+        FROM gold_kpi_trends
+        WHERE metric_name IN ('revenue', 'operating_margin_pct', 'diluted_eps')
+        ORDER BY metric_name, fiscal_year
+    """)
+
+
+@app.get("/kpis/latest")
+def kpis_latest() -> list[dict]:
+    return fetch_all("""
+        SELECT g.fiscal_year, g.metric_name, g.value, g.yoy_change_pct, g.cagr_3yr_pct, g.insight_text
+        FROM gold_kpi_trends g
+        INNER JOIN (
+            SELECT metric_name, MAX(fiscal_year) AS max_year
+            FROM gold_kpi_trends
+            WHERE metric_name IN ('revenue', 'operating_margin_pct', 'diluted_eps')
+            GROUP BY metric_name
+        ) latest ON g.metric_name = latest.metric_name AND g.fiscal_year = latest.max_year
+        WHERE g.metric_name IN ('revenue', 'operating_margin_pct', 'diluted_eps')
+    """)
