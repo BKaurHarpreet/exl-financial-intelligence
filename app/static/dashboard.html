@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EXL Financial Intelligence — FY2025 Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#101B33;
+    --paper:#F6F5F1;
+    --panel:#FFFFFF;
+    --line:#DEDCD3;
+    --text:#232A38;
+    --muted:#6B7280;
+    --signal-blue:#2454FF;
+    --positive:#0F6E5F;
+    --negative:#B3401F;
+    --amber:#B8863B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--text);
+    font-family:"IBM Plex Sans", sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .masthead{
+    background:var(--ink);
+    color:#F6F5F1;
+    padding:28px 40px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+  }
+  .masthead h1{
+    font-family:"Source Serif 4", serif;
+    font-weight:700;
+    font-size:28px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .masthead .ticker{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:13px;
+    color:#9FB0D6;
+    margin-top:4px;
+  }
+  .masthead .meta{
+    text-align:right;
+    font-size:12px;
+    color:#9FB0D6;
+    font-family:"IBM Plex Mono", monospace;
+    line-height:1.6;
+  }
+  main{
+    max-width:1280px;
+    margin:0 auto;
+    padding:32px 40px 64px;
+  }
+  .part-header{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    margin:0 0 16px;
+    padding-bottom:10px;
+    border-bottom:2px solid var(--ink);
+  }
+  .part-header .part-number{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:13px;
+    color:var(--muted);
+    background:var(--line);
+    padding:3px 8px;
+    border-radius:3px;
+  }
+  .part-header h2{
+    font-family:"Source Serif 4", serif;
+    font-size:22px;
+    font-weight:700;
+    margin:0;
+    color:var(--ink);
+  }
+  .part-header .part-sub{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12px;
+    color:var(--muted);
+    margin-left:auto;
+  }
+  .section-label{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.12em;
+    color:var(--muted);
+    margin:0 0 12px;
+  }
+  .charts-row{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    margin-bottom:36px;
+  }
+  .chart-panel{
+    background:var(--panel);
+    padding:20px 20px 12px;
+  }
+  .chart-panel h3{
+    font-family:"Source Serif 4", serif;
+    font-size:16px;
+    font-weight:600;
+    margin:0 0 2px;
+  }
+  .chart-panel .sub{
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:10px;
+  }
+  .chart-panel canvas{max-height:180px;}
+
+  .kpi-row{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    margin-bottom:8px;
+  }
+  .kpi-card{
+    background:var(--panel);
+    padding:20px;
+    position:relative;
+  }
+  .kpi-card .label{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--muted);
+    margin-bottom:10px;
+  }
+  .kpi-card .value{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:26px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .kpi-card .delta{
+    margin-top:6px;
+    font-size:13px;
+    font-weight:500;
+    font-family:"IBM Plex Mono", monospace;
+  }
+  .kpi-card .delta.pos{color:var(--positive);}
+  .kpi-card .delta.neg{color:var(--negative);}
+  .kpi-card .note{
+    margin-top:10px;
+    font-size:12.5px;
+    color:var(--text);
+    line-height:1.4;
+  }
+  .badge{
+    display:inline-block;
+    font-family:"IBM Plex Mono", monospace;
+    font-size:10px;
+    letter-spacing:0.04em;
+    padding:2px 6px;
+    border-radius:3px;
+    margin-top:8px;
+  }
+  .badge.fresh{background:#E6F2EF; color:var(--positive);}
+  .badge.stale{background:#F5EADC; color:var(--amber);}
+
+  .other-figures{
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    margin-bottom:36px;
+  }
+  .other-figures .fig{
+    background:var(--panel);
+    padding:14px 16px;
+  }
+  .other-figures .fig .label{
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    font-family:"IBM Plex Mono", monospace;
+  }
+  .other-figures .fig .value{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:17px;
+    font-weight:600;
+    margin-top:4px;
+  }
+
+  .band{
+    border:1px solid var(--line);
+    border-left:4px solid var(--line);
+    background:var(--panel);
+    margin-bottom:20px;
+    padding:20px 24px;
+  }
+  .recs{border-left-color:var(--positive);}
+  .methodology{border-left-color:var(--muted); background:#FAFAF8;}
+  .methodology li{color:var(--muted); font-size:13px;}
+  .band h2{
+    font-family:"Source Serif 4", serif;
+    font-size:18px;
+    font-weight:600;
+    margin:0 0 14px;
+  }
+
+  .band ul{margin:0; padding-left:20px;}
+  .band li{margin-bottom:8px; font-size:14px; line-height:1.5;}
+  .band li .tag{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:10.5px;
+    color:var(--muted);
+    display:block;
+    margin-top:2px;
+  }
+
+  .provenance-strip{
+    margin-top:8px;
+    font-size:11.5px;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", monospace;
+    border-top:1px dashed var(--line);
+    padding-top:10px;
+  }
+
+  .lineage-link{
+    text-align:right;
+    margin-bottom:16px;
+  }
+  .lineage-link a{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12px;
+    color:var(--signal-blue);
+    text-decoration:none;
+  }
+  .lineage-link a:hover{text-decoration:underline;}
+
+  #status-banner{
+    display:none;
+    margin-bottom:16px;
+    padding:10px 14px;
+    border-radius:4px;
+    font-size:13px;
+    font-family:"IBM Plex Mono", monospace;
+  }
+  #status-banner.loading{background:#eef2f6; color:#334e68; border:1px solid #d9e2ec;}
+  #status-banner.error{background:#fef2f2; color:#b91c1c; border:1px solid #fecaca;}
+
+  @media (max-width: 980px){
+    .charts-row{grid-template-columns:1fr;}
+    .kpi-row{grid-template-columns:repeat(2, 1fr);}
+    .other-figures{grid-template-columns:repeat(3, 1fr);}
+    main{padding:24px 20px 48px;}
+    .masthead{padding:20px;}
+    .masthead .meta{text-align:left;}
+  }
+  @media (max-width: 560px){
+    .kpi-row{grid-template-columns:1fr;}
+    .other-figures{grid-template-columns:repeat(2, 1fr);}
+    .masthead h1{font-size:22px;}
+    .part-header{flex-wrap:wrap;}
+    .part-header .part-sub{margin-left:0;}
+  }
+
+  @media print{
+    body{background:#fff;}
+    .masthead{background:#fff !important; color:#000; border-bottom:2px solid #000;}
+    .masthead .ticker, .masthead .meta{color:#333 !important;}
+    .charts-row, .kpi-row, .other-figures{border-color:#999;}
+    .band{break-inside:avoid; border-color:#999;}
+    .lineage-link{display:none;}
+    canvas{max-height:150px !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div>
+    <h1>EXL Service Holdings — Financial Intelligence</h1>
+    <div class="ticker">NASDAQ: EXLS &nbsp;·&nbsp; Business Process Management &amp; Analytics</div>
+  </div>
+  <div class="meta" id="masthead-meta">
+    LOADING…
+  </div>
+</div>
+
+<main>
+
+  <div id="status-banner"></div>
+
+  <div class="lineage-link">
+    <a href="/lineage">View source lineage for every figure on this page →</a>
+  </div>
+
+  <div class="part-header">
+    <span class="part-number">PART 1</span>
+    <h2>Historical Trends</h2>
+    <span class="part-sub" id="trends-range">Loading…</span>
+  </div>
+  <div class="charts-row">
+    <div class="chart-panel">
+      <h3>Revenue Growth</h3>
+      <div class="sub">$M, as originally reported</div>
+      <canvas id="chartRevenue"></canvas>
+    </div>
+    <div class="chart-panel">
+      <h3>Cash Flow</h3>
+      <div class="sub">Operating vs. investing vs. financing, $M</div>
+      <canvas id="chartCashFlow"></canvas>
+    </div>
+    <div class="chart-panel">
+      <h3>Profitability</h3>
+      <div class="sub">Operating margin, %</div>
+      <canvas id="chartMargin"></canvas>
+    </div>
+  </div>
+
+  <div class="part-header">
+    <span class="part-number">PART 2</span>
+    <h2 id="snapshot-title">Snapshot</h2>
+    <span class="part-sub" id="snapshot-sub">Loading…</span>
+  </div>
+  <div class="kpi-row" id="kpi-row">
+    <div class="kpi-card"><div class="label">Operating Margin</div><div class="value">…</div></div>
+    <div class="kpi-card"><div class="label">Diluted EPS</div><div class="value">…</div></div>
+    <div class="kpi-card"><div class="label">Fastest-Growing Business Line</div><div class="value">…</div></div>
+    <div class="kpi-card"><div class="label">Fastest-Growing Country</div><div class="value">…</div></div>
+  </div>
+
+  <div class="other-figures" id="other-figures">
+    <div class="fig"><div class="label">Revenue</div><div class="value">…</div></div>
+    <div class="fig"><div class="label">Gross Margin</div><div class="value">…</div></div>
+    <div class="fig"><div class="label">Net Income</div><div class="value">…</div></div>
+    <div class="fig"><div class="label">Operating Cash Flow</div><div class="value">…</div></div>
+    <div class="fig"><div class="label">Cash &amp; Investments</div><div class="value">…</div></div>
+  </div>
+
+  <div class="band recs">
+    <h2>Key Insights</h2>
+    <ul id="insights-list"><li>Loading…</li></ul>
+  </div>
+
+  <div class="band methodology">
+    <h2>Data Quality Gap</h2>
+    <p style="font-size:12.5px; color:var(--muted); margin:-6px 0 14px;">Limitations in what this filing data can and can't tell you — not risks to the business itself.</p>
+    <ul id="data-quality-list"><li>Loading…</li></ul>
+    <p style="font-size:12px; color:var(--muted); margin:14px 0 0; padding-top:10px; border-top:1px dashed var(--line);">
+      Note: this dashboard is built from Part II Item 8 (Financial Statements and Notes) only. EXL's actual Item 1A Risk Factors and Item 7 MD&amp;A narrative are not present in this data source and would require a separate ingestion path.
+    </p>
+  </div>
+
+  <div class="provenance-strip">
+    All figures traced to source cell/filing via lineage table. Segment and geography figures reflect as-originally-filed values (earliest filing to report each fiscal year), not later restatements.
+  </div>
+
+  <details style="margin-top:24px;">
+    <summary style="font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--muted); cursor:pointer;">Pipeline runs &amp; raw data (debug)</summary>
+    <div style="margin-top:12px; overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:12px; font-family:'IBM Plex Mono', monospace;" id="debug-runs-table">
+        <thead><tr><th style="text-align:left; padding:6px; border-bottom:1px solid var(--line);">Status</th><th style="text-align:left; padding:6px; border-bottom:1px solid var(--line);">Started</th><th style="text-align:left; padding:6px; border-bottom:1px solid var(--line);">Files</th></tr></thead>
+        <tbody><tr><td colspan="3" style="padding:6px;">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <button id="run-pipeline" style="margin-top:12px; font-family:'IBM Plex Mono', monospace; font-size:12px; padding:6px 12px; cursor:pointer;">Re-run ETL</button>
+  </details>
+
+</main>
+
+<script>
+function setStatus(message, kind) {
+  const el = document.getElementById('status-banner');
+  if (!message) { el.style.display = 'none'; return; }
+  el.textContent = message;
+  el.className = kind;
+  el.style.display = 'block';
+}
+
+async function getJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`${url} -> ${response.status}: ${await response.text()}`);
+  return response.json();
+}
+
+function fmtM(value) {
+  if (value === null || value === undefined) return '—';
+  return `$${(value / 1000).toFixed(1)}M`;
+}
+function fmtPct(value, digits = 1) {
+  if (value === null || value === undefined) return '—';
+  return `${value.toFixed(digits)}%`;
+}
+function deltaHtml(yoy) {
+  if (yoy === null || yoy === undefined) return '';
+  const cls = yoy >= 0 ? 'pos' : 'neg';
+  const arrow = yoy >= 0 ? '▲' : '▼';
+  return `<div class="delta ${cls}">${arrow} ${Math.abs(yoy).toFixed(1)}% YoY</div>`;
+}
+function badgeHtml(dataYear, currentYear) {
+  const fresh = dataYear === currentYear;
+  return `<span class="badge ${fresh ? 'fresh' : 'stale'}">FY${dataYear} · ${fresh ? 'disclosed' : 'last disclosed'}</span>`;
+}
+
+function renderNotesList(elementId, notes) {
+  const el = document.getElementById(elementId);
+  if (!notes.length) {
+    el.innerHTML = '<li style="color:var(--muted);">None generated for the current data.</li>';
+    return;
+  }
+  el.innerHTML = notes.map(n => `
+    <li>${n.note_text}<span class="tag">${n.source_tag || ''}</span></li>
+  `).join('');
+}
+
+async function loadDashboard() {
+  setStatus('Loading dashboard…', 'loading');
+  try {
+    const [trends, latest, other, insightNotes, dataQualityNotes] = await Promise.all([
+      getJson('/dashboard/trends'),
+      getJson('/dashboard/latest'),
+      getJson('/dashboard/other-figures'),
+      getJson('/dashboard/notes?category=insight'),
+      getJson('/dashboard/notes?category=data_quality'),
+    ]);
+
+    const currentYear = latest.current_fiscal_year;
+    const geoYear = latest.geography_data_year;
+
+    // Masthead
+    const years = trends.kpi.map(r => r.fiscal_year);
+    const minYear = Math.min(...years), maxYear = Math.max(...years);
+    document.getElementById('masthead-meta').innerHTML =
+      `LATEST DISCLOSED FISCAL YEAR: FY${currentYear}<br/>` +
+      `SOURCE: FORM 10-K<br/>` +
+      `COVERING FISCAL YEARS FY${minYear}–FY${maxYear}`;
+    document.getElementById('trends-range').textContent = `FY${minYear} → FY${maxYear}`;
+    document.getElementById('snapshot-title').textContent = `FY${currentYear} Snapshot`;
+    document.getElementById('snapshot-sub').textContent = 'Latest disclosed fiscal year';
+
+    // Charts
+    const byMetric = {};
+    for (const r of trends.kpi) (byMetric[r.metric_name] ||= []).push(r);
+    const revRows = (byMetric.revenue || []).sort((a,b) => a.fiscal_year - b.fiscal_year);
+    const marginRows = (byMetric.operating_margin_pct || []).sort((a,b) => a.fiscal_year - b.fiscal_year);
+    const cfRows = trends.cash_flow.sort((a,b) => a.fiscal_year - b.fiscal_year);
+
+    const inkAxis = { grid:{color:'#EDEBE3'}, ticks:{ font:{family:'IBM Plex Mono', size:10}, color:'#6B7280' } };
+
+    new Chart(document.getElementById('chartRevenue'), {
+      type:'line',
+      data:{ labels:revRows.map(r => r.fiscal_year), datasets:[{
+        data:revRows.map(r => Math.round(r.value/1000)), borderColor:'#2454FF', backgroundColor:'rgba(36,84,255,0.08)',
+        fill:true, tension:0.3, pointRadius:2, borderWidth:2
+      }]},
+      options:{ plugins:{legend:{display:false}}, scales:{ x:inkAxis, y:inkAxis } }
+    });
+    new Chart(document.getElementById('chartCashFlow'), {
+      type:'bar',
+      data:{ labels:cfRows.map(r => r.fiscal_year), datasets:[
+        { label:'Operating', data:cfRows.map(r => Math.round(r.operating/1000)), backgroundColor:'#0F6E5F' },
+        { label:'Investing', data:cfRows.map(r => Math.round((r.investing||0)/1000)), backgroundColor:'#B8863B' },
+        { label:'Financing', data:cfRows.map(r => Math.round((r.financing||0)/1000)), backgroundColor:'#B3401F' },
+      ]},
+      options:{ plugins:{legend:{display:true, labels:{font:{family:'IBM Plex Sans', size:10}, boxWidth:10}}},
+        scales:{ x:inkAxis, y:inkAxis } }
+    });
+    new Chart(document.getElementById('chartMargin'), {
+      type:'line',
+      data:{ labels:marginRows.map(r => r.fiscal_year), datasets:[{
+        data:marginRows.map(r => r.value), borderColor:'#0F6E5F', backgroundColor:'rgba(15,110,95,0.08)',
+        fill:true, tension:0.3, pointRadius:2, borderWidth:2
+      }]},
+      options:{ plugins:{legend:{display:false}}, scales:{ x:inkAxis, y:inkAxis } }
+    });
+
+    // KPI cards
+    const kpiByName = {};
+    for (const r of latest.kpi) kpiByName[r.metric_name] = r;
+    const margin = kpiByName.operating_margin_pct, eps = kpiByName.diluted_eps;
+    const seg = latest.top_segment;
+    const countryCandidates = (latest.top_country_candidates || []);
+    const namedCountries = countryCandidates.filter(c => c.country !== 'Rest of World');
+    const topNamed = namedCountries.length ? namedCountries.reduce((a,b) => (b.yoy_change_pct > a.yoy_change_pct ? b : a)) : null;
+    const rowCandidate = countryCandidates.find(c => c.country === 'Rest of World');
+    const rowBeatsNamed = topNamed && rowCandidate && rowCandidate.yoy_change_pct > topNamed.yoy_change_pct;
+
+    const cards = document.querySelectorAll('#kpi-row .kpi-card');
+    cards[0].innerHTML = `
+      <div class="label">Operating Margin</div>
+      <div class="value">${fmtPct(margin?.value)}</div>
+      ${deltaHtml(margin?.yoy_change_pct)}
+      <p class="note">${margin?.insight_text || ''}</p>
+      ${badgeHtml(currentYear, currentYear)}
+    `;
+    cards[1].innerHTML = `
+      <div class="label">Diluted EPS</div>
+      <div class="value">$${eps?.value?.toFixed(2) ?? '—'}</div>
+      ${deltaHtml(eps?.yoy_change_pct)}
+      <p class="note">${eps?.insight_text || ''}</p>
+      ${badgeHtml(currentYear, currentYear)}
+    `;
+    cards[2].innerHTML = seg ? `
+      <div class="label">Fastest-Growing Business Line</div>
+      <div class="value" style="font-size:19px;">${seg.segment_name}</div>
+      ${deltaHtml(seg.yoy_change_pct)}
+      <p class="note">Fastest-growing segment in FY${seg.fiscal_year} by revenue growth rate.</p>
+      ${badgeHtml(seg.fiscal_year, currentYear)}
+    ` : '<div class="label">Fastest-Growing Business Line</div><p class="note">No segment data available.</p>';
+    cards[3].innerHTML = topNamed ? `
+      <div class="label">Fastest-Growing Country</div>
+      <div class="value" style="font-size:19px;">${topNamed.country.replace('The ', '')}</div>
+      ${deltaHtml(topNamed.yoy_change_pct)}
+      <p class="note">Fastest of the named countries disclosed.${rowBeatsNamed ? ` "Rest of World" — an aggregate, not one country — grew faster still (+${rowCandidate.yoy_change_pct.toFixed(1)}%), but isn't attributable to a single geography.` : ''}</p>
+      ${badgeHtml(geoYear, currentYear)}
+    ` : '<div class="label">Fastest-Growing Country</div><p class="note">No geography data available for any recent year.</p>';
+
+    // Other figures
+    document.getElementById('other-figures').innerHTML = `
+      <div class="fig"><div class="label">Revenue</div><div class="value">${fmtM(other.revenue)}</div></div>
+      <div class="fig"><div class="label">Gross Margin</div><div class="value">${fmtPct(other.gross_margin_pct)}</div></div>
+      <div class="fig"><div class="label">Net Income</div><div class="value">${fmtM(other.net_income)}</div></div>
+      <div class="fig"><div class="label">Operating Cash Flow</div><div class="value">${fmtM(other.operating_cash_flow)}</div></div>
+      <div class="fig"><div class="label">Cash &amp; Investments</div><div class="value">${fmtM(other.cash_and_investments)}</div></div>
+    `;
+
+    // Notes
+    renderNotesList('insights-list', insightNotes);
+    renderNotesList('data-quality-list', dataQualityNotes);
+
+    // Debug: pipeline runs
+    try {
+      const runs = await getJson('/pipeline/runs');
+      const tbody = document.querySelector('#debug-runs-table tbody');
+      tbody.innerHTML = runs.length ? runs.map(r => `
+        <tr><td style="padding:6px; border-bottom:1px solid var(--line);">${r.status}</td>
+            <td style="padding:6px; border-bottom:1px solid var(--line);">${r.started_at}</td>
+            <td style="padding:6px; border-bottom:1px solid var(--line);">${r.source_file_count}</td></tr>
+      `).join('') : '<tr><td colspan="3" style="padding:6px;">No runs yet.</td></tr>';
+    } catch (e) { console.error('Debug runs failed to load:', e); }
+
+    setStatus(null);
+  } catch (error) {
+    console.error('Dashboard load failed:', error);
+    setStatus(`Dashboard failed to load: ${error.message}. This page must be served by the API (app/static/) to work.`, 'error');
+  }
+}
+
+loadDashboard();
+
+document.getElementById('run-pipeline').addEventListener('click', async () => {
+  const button = document.getElementById('run-pipeline');
+  button.disabled = true;
+  setStatus('Re-running ETL pipeline…', 'loading');
+  try {
+    await fetch('/pipeline/run', { method: 'POST' });
+    await loadDashboard();
+  } catch (error) {
+    setStatus(`Pipeline run failed: ${error.message}`, 'error');
+  } finally {
+    button.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>

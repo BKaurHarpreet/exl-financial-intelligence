@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS gold_kpi_trends (
     metric_name TEXT NOT NULL,
     value NUMERIC NOT NULL,
     source_file TEXT NOT NULL,
+    source_address TEXT,
     yoy_change_pct NUMERIC,
     cagr_3yr_pct NUMERIC,
     trend_label TEXT,

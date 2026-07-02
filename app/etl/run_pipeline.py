@@ -13,6 +13,8 @@ from app.etl.gold import build_gold
 from app.etl.silver import load_silver
 from app.logging_config import configure_logging
 from app.etl.kpi import build_kpi_trends
+from app.etl.segments import build_segment_and_geo_trends, build_cash_position
+from app.etl.notes import build_dashboard_notes
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,9 @@ def run_pipeline() -> str:
             silver_count = load_silver(connection, run_id)
             gold_count = build_gold(connection, run_id)
             kpi_count = build_kpi_trends(connection, run_id)
+            segment_count, geo_count, cash_count = build_segment_and_geo_trends(connection, run_id)
+            cash_position_count = build_cash_position(connection, run_id)
+            notes_count = build_dashboard_notes(connection, run_id)
             connection.execute(
                 text("""
                     UPDATE lineage_pipeline_runs

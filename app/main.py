@@ -43,7 +43,13 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
-    with open("app/static/index.html", "r", encoding="utf-8") as handle:
+    with open("app/static/dashboard.html", "r", encoding="utf-8") as handle:
+        return handle.read()
+
+
+@app.get("/lineage", response_class=HTMLResponse)
+def lineage_page() -> str:
+    with open("app/static/lineage.html", "r", encoding="utf-8") as handle:
         return handle.read()
 
 
@@ -115,15 +121,138 @@ def metrics(limit: int = 100) -> list[dict]:
 
 @app.get("/lineage/{metric_name}")
 def metric_lineage(metric_name: str, fiscal_year: int | None = None) -> list[dict]:
-    return fetch_all("""
-        SELECT fiscal_year, metric_name, value_numeric, value_text, source_file,
-               sheet_name, source_address, cell_id
-        FROM silver_financial_facts
-        WHERE LOWER(metric_name) = LOWER(:metric_name)
+    key = metric_name.strip().lower()
+
+    kpi_rows = fetch_all("""
+        SELECT fiscal_year, metric_name, value, source_file, source_address
+        FROM gold_kpi_trends
+        WHERE LOWER(metric_name) = LOWER(:key)
           AND (:fiscal_year IS NULL OR fiscal_year = :fiscal_year)
-        ORDER BY fiscal_year DESC, source_file, sheet_name, source_address
-        LIMIT 250
-    """, {"metric_name": metric_name, "fiscal_year": fiscal_year})
+        ORDER BY fiscal_year DESC
+    """, {"key": key, "fiscal_year": fiscal_year})
+    if kpi_rows:
+        return [{"fiscal_year": r["fiscal_year"], "metric_name": r["metric_name"], "value": r["value"],
+                  "source_file": r["source_file"], "sheet_name": "income", "source_address": r["source_address"],
+                  "cell_id": r["source_address"]} for r in kpi_rows]
+
+    segment_rows = fetch_all("""
+        SELECT fiscal_year, segment_name, revenue, source_file, sheet_name, source_address
+        FROM gold_segment_trends
+        WHERE LOWER(segment_name) = LOWER(:key)
+          AND (:fiscal_year IS NULL OR fiscal_year = :fiscal_year)
+        ORDER BY fiscal_year DESC
+    """, {"key": key, "fiscal_year": fiscal_year})
+    if segment_rows:
+        return [{"fiscal_year": r["fiscal_year"], "metric_name": r["segment_name"], "value": r["revenue"],
+                  "source_file": r["source_file"], "sheet_name": r["sheet_name"], "source_address": r["source_address"],
+                  "cell_id": r["source_address"]} for r in segment_rows]
+
+    geo_rows = fetch_all("""
+        SELECT fiscal_year, country, revenue, source_file, sheet_name, source_address
+        FROM gold_geography_trends
+        WHERE LOWER(country) = LOWER(:key) OR LOWER(REPLACE(country, 'The ', '')) = LOWER(:key)
+          AND (:fiscal_year IS NULL OR fiscal_year = :fiscal_year)
+        ORDER BY fiscal_year DESC
+    """, {"key": key, "fiscal_year": fiscal_year})
+    if geo_rows:
+        return [{"fiscal_year": r["fiscal_year"], "metric_name": r["country"], "value": r["revenue"],
+                  "source_file": r["source_file"], "sheet_name": r["sheet_name"], "source_address": r["source_address"],
+                  "cell_id": r["source_address"]} for r in geo_rows]
+
+    if key in {"operating", "investing", "financing", "operating_cash_flow", "investing_cash_flow", "financing_cash_flow"}:
+        col = key.replace("_cash_flow", "")
+        cash_rows = fetch_all(f"""
+            SELECT fiscal_year, {col} AS value, source_file, source_address
+            FROM gold_cash_flow_trends
+            WHERE (:fiscal_year IS NULL OR fiscal_year = :fiscal_year)
+            ORDER BY fiscal_year DESC
+        """, {"fiscal_year": fiscal_year})
+        return [{"fiscal_year": r["fiscal_year"], "metric_name": f"{col}_cash_flow", "value": r["value"],
+                  "source_file": r["source_file"], "sheet_name": "cash flows", "source_address": r["source_address"],
+                  "cell_id": r["source_address"]} for r in cash_rows]
+
+    return []
+
+
+@app.get("/dashboard/trends")
+def dashboard_trends() -> dict:
+    kpi = fetch_all("""
+        SELECT fiscal_year, metric_name, value FROM gold_kpi_trends
+        WHERE metric_name IN ('revenue', 'operating_margin_pct') ORDER BY metric_name, fiscal_year
+    """)
+    cash_flow = fetch_all("SELECT fiscal_year, operating, investing, financing FROM gold_cash_flow_trends ORDER BY fiscal_year")
+    return {"kpi": kpi, "cash_flow": cash_flow}
+
+
+@app.get("/dashboard/latest")
+def dashboard_latest() -> dict:
+    kpi_latest = fetch_all("""
+        SELECT g.fiscal_year, g.metric_name, g.value, g.yoy_change_pct, g.insight_text
+        FROM gold_kpi_trends g
+        INNER JOIN (
+            SELECT metric_name, MAX(fiscal_year) AS max_year FROM gold_kpi_trends
+            WHERE metric_name IN ('revenue', 'operating_margin_pct', 'diluted_eps')
+            GROUP BY metric_name
+        ) latest ON g.metric_name = latest.metric_name AND g.fiscal_year = latest.max_year
+        WHERE g.metric_name IN ('revenue', 'operating_margin_pct', 'diluted_eps')
+    """)
+    top_segment = fetch_all("""
+        SELECT segment_name, revenue, yoy_change_pct, fiscal_year FROM gold_segment_trends
+        WHERE fiscal_year = (SELECT MAX(fiscal_year) FROM gold_segment_trends)
+        ORDER BY yoy_change_pct DESC LIMIT 1
+    """)
+    top_country = fetch_all("""
+        SELECT country, revenue, yoy_change_pct, fiscal_year FROM gold_geography_trends
+        WHERE fiscal_year = (SELECT MAX(fiscal_year) FROM gold_geography_trends)
+          AND yoy_change_pct IS NOT NULL
+        ORDER BY yoy_change_pct DESC LIMIT 5
+    """)
+    latest_fy_row = fetch_all("SELECT MAX(fiscal_year) AS fy FROM gold_kpi_trends")
+    geo_fy_row = fetch_all("SELECT MAX(fiscal_year) AS fy FROM gold_geography_trends")
+    return {
+        "kpi": kpi_latest,
+        "top_segment": top_segment[0] if top_segment else None,
+        "top_country_candidates": top_country,
+        "current_fiscal_year": latest_fy_row[0]["fy"] if latest_fy_row else None,
+        "geography_data_year": geo_fy_row[0]["fy"] if geo_fy_row else None,
+    }
+
+
+@app.get("/dashboard/other-figures")
+def dashboard_other_figures() -> dict:
+    fy_row = fetch_all("SELECT MAX(fiscal_year) AS fy FROM gold_kpi_trends")
+    fy = fy_row[0]["fy"] if fy_row else None
+    kpi = {r["metric_name"]: r["value"] for r in fetch_all(
+        "SELECT metric_name, value FROM gold_kpi_trends WHERE fiscal_year = :fy", {"fy": fy}
+    )}
+    cash = fetch_all("SELECT operating FROM gold_cash_flow_trends WHERE fiscal_year = :fy", {"fy": fy})
+    cash_position = fetch_all(
+        "SELECT cash_and_equivalents, short_term_investments FROM gold_cash_position WHERE fiscal_year = :fy", {"fy": fy}
+    )
+    gross_margin_pct = None
+    if kpi.get("revenue") and kpi.get("gross_profit"):
+        gross_margin_pct = kpi["gross_profit"] / kpi["revenue"] * 100
+    cash_and_investments = None
+    if cash_position:
+        cash_and_investments = (cash_position[0]["cash_and_equivalents"] or 0) + (cash_position[0]["short_term_investments"] or 0)
+    return {
+        "fiscal_year": fy,
+        "revenue": kpi.get("revenue"),
+        "gross_margin_pct": gross_margin_pct,
+        "net_income": kpi.get("net_income"),
+        "operating_cash_flow": cash[0]["operating"] if cash else None,
+        "cash_and_investments": cash_and_investments,
+    }
+
+
+@app.get("/dashboard/notes")
+def dashboard_notes(category: str | None = None) -> list[dict]:
+    if category:
+        return fetch_all(
+            "SELECT category, fiscal_year, note_text, source_tag FROM gold_dashboard_notes WHERE category = :category ORDER BY fiscal_year DESC",
+            {"category": category},
+        )
+    return fetch_all("SELECT category, fiscal_year, note_text, source_tag FROM gold_dashboard_notes ORDER BY category, fiscal_year DESC")
 
 
 @app.get("/kpis")

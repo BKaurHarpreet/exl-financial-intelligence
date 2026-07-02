@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EXL Financial Intelligence — Source Lineage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#101B33;
+    --paper:#F6F5F1;
+    --panel:#FFFFFF;
+    --line:#DEDCD3;
+    --text:#232A38;
+    --muted:#6B7280;
+    --signal-blue:#2454FF;
+    --positive:#0F6E5F;
+    --negative:#B3401F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--text);
+    font-family:"IBM Plex Sans", sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .masthead{
+    background:var(--ink);
+    color:#F6F5F1;
+    padding:28px 40px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+  }
+  .masthead h1{
+    font-family:"Source Serif 4", serif;
+    font-weight:700;
+    font-size:26px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .masthead .sub{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:13px;
+    color:#9FB0D6;
+    margin-top:4px;
+  }
+  .masthead a.back{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12px;
+    color:#9FB0D6;
+    text-decoration:none;
+  }
+  .masthead a.back:hover{text-decoration:underline;}
+
+  main{
+    max-width:1100px;
+    margin:0 auto;
+    padding:32px 40px 64px;
+  }
+
+  .intro{
+    font-size:14px;
+    color:var(--muted);
+    max-width:680px;
+    margin:0 0 24px;
+    line-height:1.5;
+  }
+
+  .controls{
+    display:flex;
+    gap:16px;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:18px 20px;
+    margin-bottom:24px;
+  }
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--muted);
+  }
+  .field select, .field input{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:13px;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--text);
+    min-width:220px;
+  }
+  .field input{min-width:100px;}
+  button#lookup{
+    font-family:"IBM Plex Sans", sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:9px 18px;
+    background:var(--signal-blue);
+    color:#fff;
+    border:none;
+    cursor:pointer;
+  }
+  button#lookup:hover{background:#1a3fd6;}
+  button#lookup:disabled{background:var(--muted); cursor:not-allowed;}
+
+  #status-banner{
+    display:none;
+    margin-bottom:16px;
+    padding:10px 14px;
+    border-radius:4px;
+    font-size:13px;
+    font-family:"IBM Plex Mono", monospace;
+  }
+  #status-banner.loading{background:#eef2f6; color:#334e68; border:1px solid #d9e2ec;}
+  #status-banner.error{background:#fef2f2; color:#b91c1c; border:1px solid #fecaca;}
+  #status-banner.empty{background:#FAFAF8; color:var(--muted); border:1px solid var(--line);}
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--panel);
+    border:1px solid var(--line);
+  }
+  thead th{
+    text-align:left;
+    font-family:"IBM Plex Mono", monospace;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--muted);
+    padding:10px 14px;
+    border-bottom:2px solid var(--ink);
+    background:#FAFAF8;
+  }
+  tbody td{
+    padding:10px 14px;
+    font-size:13px;
+    border-bottom:1px solid var(--line);
+    font-family:"IBM Plex Mono", monospace;
+  }
+  tbody td.value{font-weight:600; color:var(--ink);}
+  tbody tr:hover{background:#FAFAF8;}
+  tbody td.source-cell{color:var(--signal-blue);}
+
+  .footnote{
+    margin-top:16px;
+    font-size:11.5px;
+    color:var(--muted);
+    font-family:"IBM Plex Mono", monospace;
+  }
+
+  @media (max-width: 700px){
+    .controls{flex-direction:column; align-items:stretch;}
+    .field select, .field input{min-width:0; width:100%;}
+    main{padding:20px;}
+    table, thead, tbody, tr, td, th{display:block;}
+    thead{display:none;}
+    tbody tr{border:1px solid var(--line); margin-bottom:10px; padding:8px;}
+    tbody td{border:none; padding:4px 6px;}
+    tbody td::before{content: attr(data-label) ": "; color:var(--muted);}
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div>
+    <h1>Source Lineage</h1>
+    <div class="sub">Every reported figure traced to its exact source cell</div>
+  </div>
+  <a class="back" href="/dashboard">← Back to dashboard</a>
+</div>
+
+<main>
+  <p class="intro">
+    Type a metric name (revenue, diluted_eps, gross_profit, net_income, operating/investing/financing
+    cash flow), a segment name (e.g. "Insurance"), or a country name (e.g. "The United States") to see
+    exactly which filing, sheet, and cell each reported value came from. Segment and country names vary
+    by filing year — EXL has renamed its segments three times since FY2017 — so try a few if one comes
+    up empty. This calls the live API; it only returns data when this page is served by the running
+    EXL Financial Intelligence app.
+  </p>
+
+  <div class="controls">
+    <div class="field">
+      <label for="metric">Metric, Segment, or Country</label>
+      <input id="metric" list="metric-suggestions" placeholder="e.g. revenue" value="revenue" />
+      <datalist id="metric-suggestions">
+        <option value="revenue">
+        <option value="gross_profit">
+        <option value="operating_income">
+        <option value="operating_margin_pct">
+        <option value="net_income">
+        <option value="diluted_eps">
+        <option value="operating">
+        <option value="investing">
+        <option value="financing">
+        <option value="Insurance">
+        <option value="Healthcare and Life Sciences">
+        <option value="Analytics">
+        <option value="The United States">
+        <option value="The United Kingdom">
+        <option value="Rest of World">
+      </datalist>
+    </div>
+    <div class="field">
+      <label for="fiscalYear">Fiscal Year (optional)</label>
+      <input id="fiscalYear" type="number" min="2000" max="2100" placeholder="e.g. 2025" />
+    </div>
+    <button id="lookup">Look up</button>
+  </div>
+
+  <div id="status-banner"></div>
+
+  <table id="results" style="display:none;">
+    <thead>
+      <tr>
+        <th>Fiscal Year</th>
+        <th>Value</th>
+        <th>Source File</th>
+        <th>Sheet</th>
+        <th>Cell Address</th>
+      </tr>
+    </thead>
+    <tbody id="results-body"></tbody>
+  </table>
+
+  <p class="footnote" id="row-count"></p>
+</main>
+
+<script>
+function setStatus(message, kind) {
+  const el = document.getElementById('status-banner');
+  if (!message) { el.style.display = 'none'; return; }
+  el.textContent = message;
+  el.className = kind;
+  el.style.display = 'block';
+}
+
+async function lookup() {
+  const metric = document.getElementById('metric').value;
+  const fiscalYear = document.getElementById('fiscalYear').value.trim();
+  const button = document.getElementById('lookup');
+  const table = document.getElementById('results');
+  const body = document.getElementById('results-body');
+  const rowCount = document.getElementById('row-count');
+
+  button.disabled = true;
+  table.style.display = 'none';
+  rowCount.textContent = '';
+  setStatus('Looking up lineage...', 'loading');
+
+  let url = `/lineage/${encodeURIComponent(metric)}`;
+  if (fiscalYear) url += `?fiscal_year=${encodeURIComponent(fiscalYear)}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`${response.status}: ${await response.text()}`);
+    const rows = await response.json();
+
+    if (!rows.length) {
+      setStatus(`No lineage rows found for "${metric}"${fiscalYear ? ' in FY' + fiscalYear : ''}.`, 'empty');
+      return;
+    }
+
+    body.innerHTML = '';
+    for (const row of rows) {
+      const tr = document.createElement('tr');
+      const value = row.value ?? '—';
+      tr.innerHTML = `
+        <td data-label="Fiscal Year">${row.fiscal_year}</td>
+        <td data-label="Value" class="value">${value}</td>
+        <td data-label="Source File">${row.source_file ?? '—'}</td>
+        <td data-label="Sheet">${row.sheet_name ?? '—'}</td>
+        <td data-label="Cell Address" class="source-cell">${row.source_address ?? row.cell_id ?? '—'}</td>
+      `;
+      body.appendChild(tr);
+    }
+    table.style.display = '';
+    rowCount.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'} returned (capped at 250 by the API).`;
+    setStatus(null);
+  } catch (error) {
+    console.error('Lineage lookup failed:', error);
+    setStatus(`Lookup failed: ${error.message}. This page must be served by the API to work — see the note above.`, 'error');
+  } finally {
+    button.disabled = false;
+  }
+}
+
+document.getElementById('lookup').addEventListener('click', lookup);
+document.getElementById('fiscalYear').addEventListener('keydown', (e) => { if (e.key === 'Enter') lookup(); });
+</script>
+
+</body>
+</html>

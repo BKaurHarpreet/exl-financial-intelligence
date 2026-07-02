@@ -14,6 +14,8 @@ METRIC_DISPLAY = {
     "operating_income": "Operating income",
     "operating_margin_pct": "Operating margin",
     "diluted_eps": "Diluted EPS",
+    "gross_profit": "Gross profit",
+    "net_income": "Net income",
 }
 
 
@@ -47,7 +49,7 @@ def _extract_income_sheet_kpis(connection: Connection, run_id: str) -> list[dict
     for wb in workbooks:
         rows = connection.execute(
             text("""
-                SELECT row_number, column_number, normalized_text
+                SELECT row_number, column_number, normalized_text, source_address
                 FROM bronze_cells
                 WHERE workbook_id = :workbook_id AND sheet_name = 'income'
                 ORDER BY row_number, column_number
@@ -58,8 +60,10 @@ def _extract_income_sheet_kpis(connection: Connection, run_id: str) -> list[dict
             continue
 
         by_row: dict[int, dict[int, str | None]] = {}
+        addr_row: dict[int, dict[int, str | None]] = {}
         for r in rows:
             by_row.setdefault(r["row_number"], {})[r["column_number"]] = r["normalized_text"]
+            addr_row.setdefault(r["row_number"], {})[r["column_number"]] = r["source_address"]
 
         # Locate the year-header row: the first row with >=2 cells matching 20xx
         year_columns: dict[int, int] = {}
@@ -77,14 +81,19 @@ def _extract_income_sheet_kpis(connection: Connection, run_id: str) -> list[dict
             continue
 
         revenue_row = operating_income_row = diluted_eps_row = weighted_avg_row = None
+        gross_profit_row = net_income_row = None
         for row_num in sorted(by_row):
             label = (by_row[row_num].get(1) or "").strip().lower()
             if not label:
                 continue
             if revenue_row is None and "revenues, net" in label:
                 revenue_row = row_num
+            elif gross_profit_row is None and "gross profit" in label:
+                gross_profit_row = row_num
             elif operating_income_row is None and "income from operations" in label:
                 operating_income_row = row_num
+            elif net_income_row is None and label == "net income":
+                net_income_row = row_num
             elif weighted_avg_row is None and "weighted-average" in label:
                 weighted_avg_row = row_num
             elif diluted_eps_row is None and label == "diluted":
@@ -97,7 +106,9 @@ def _extract_income_sheet_kpis(connection: Connection, run_id: str) -> list[dict
 
         for metric_name, row_num in (
             ("revenue", revenue_row),
+            ("gross_profit", gross_profit_row),
             ("operating_income", operating_income_row),
+            ("net_income", net_income_row),
             ("diluted_eps", diluted_eps_row),
         ):
             if row_num is None:
@@ -114,6 +125,7 @@ def _extract_income_sheet_kpis(connection: Connection, run_id: str) -> list[dict
                     "value": value,
                     "source_file": wb["source_file"],
                     "filing_year": wb["filing_year"],
+                    "source_address": addr_row.get(row_num, {}).get(col),
                 })
 
     return facts
@@ -189,6 +201,7 @@ def _add_operating_margin(deduped: list[dict]) -> list[dict]:
                 "value": (opinc_row["value"] / rev_row["value"]) * 100,
                 "source_file": opinc_row["source_file"],
                 "filing_year": opinc_row["filing_year"],
+                "source_address": None,  # derived ratio, not a single source cell
             })
     return deduped + margin_rows
 
@@ -205,10 +218,10 @@ def build_kpi_trends(connection: Connection, run_id: str) -> int:
     connection.execute(
         text("""
             INSERT INTO gold_kpi_trends
-                (run_id, fiscal_year, metric_name, value, source_file,
+                (run_id, fiscal_year, metric_name, value, source_file, source_address,
                  yoy_change_pct, cagr_3yr_pct, trend_label, insight_text)
             VALUES
-                (:run_id, :fiscal_year, :metric_name, :value, :source_file,
+                (:run_id, :fiscal_year, :metric_name, :value, :source_file, :source_address,
                  :yoy_change_pct, :cagr_3yr_pct, :trend_label, :insight_text)
         """),
         enriched,
